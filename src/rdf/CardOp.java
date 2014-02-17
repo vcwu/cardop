@@ -7,6 +7,7 @@ import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
+import com.hp.hpl.jena.sparql.algebra.OpWalker;
 import com.hp.hpl.jena.sparql.algebra.op.OpAssign;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
 import com.hp.hpl.jena.sparql.algebra.op.OpConditional;
@@ -50,25 +51,26 @@ public class CardOp {
 	
 	//Here's the meat and potatoes. 
 	public static ArrayList<Op> reorder(Query orig){
-		Converter converter = new Converter(orig);
-		return converter.convert();
+	
+		
+		// Get the service
+		Op op = Algebra.compile(orig);
+		ArrayList<Op> stuff = new ArrayList<Op>();
+		OpWalker.walk(op, new Converter(stuff));
+		return stuff;
+		
 	}
 	
 	public static class Converter  implements OpVisitor {
 	
-		private Query query;
+		
 		//private HashMap<Op, Integer> map;
 		private ArrayList<Op> map;
-		
-		public Converter(Query orig)	{
-			query = orig;
+			
+		public Converter(ArrayList<Op> m)	{
+			map = m;
 		}
-		public ArrayList<Op> convert()	{
-			Op op = Algebra.compile(query);
-			//do stuff here
-			op.visit(this);
-			return map;
-		}
+	
 		@Override
 		public void visit(OpService arg0) {
 			// TODO Auto-generated method stub
