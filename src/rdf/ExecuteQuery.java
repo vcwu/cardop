@@ -30,7 +30,7 @@ public class ExecuteQuery {
 		
 		
 		Query query = QueryFactory.read("file:/Users/vptarmigan/anapsid_old/federatedActor_sparql11.query");
-		
+		//System.out.println(query);
 		System.out.println(CardOp.reorder(query));
 		
 		
