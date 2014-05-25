@@ -35,13 +35,13 @@ public class ExecuteQuery {
 		
 		
 		Query query = QueryFactory.read("file:/Users/vptarmigan/dropbox/rdf_queries/star_trek_2/star_trek.query");
-		String cardinality_file = "/Users/vptarmigan/dropbox/rdf_project/star_trek_2/star_trek.cardinalities";
+		String cardinality_file = "/Users/vptarmigan/dropbox/rdf_queries/star_trek_2/star_trek.cardinalities";
 		
 		//Parse given cardinalities - done outside for timing and testing purposes
 		ArrayList<ServiceObj> givenCardinalities = CardOp.parseCardinalityFile(cardinality_file);	
-		
+		System.out.println(givenCardinalities);
 		//Reorder using the given cardinalities
-		query = CardOp.reorder(query, givenCardinalities); 
+		//query = CardOp.reorder(query, givenCardinalities); 
 		//execute(query);
 		
 		

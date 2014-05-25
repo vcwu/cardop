@@ -1,10 +1,16 @@
 package rdf;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Scanner;
 
 import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryException;
+import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.algebra.OpAsQuery;
@@ -73,8 +79,42 @@ public class CardOp {
 	 * Parse the file of estimated cardinalities.
 	 */
 	static ArrayList<ServiceObj> parseCardinalityFile(String file_card)	{
-		ArrayList<ServiceObj> temp = new ArrayList<ServiceObj>();
-		return temp;
+		System.out.println("Parsing cardinality file...");
+		ArrayList<ServiceObj> tempList = new ArrayList<ServiceObj>();
+		try	{
+			BufferedReader in = new BufferedReader(new FileReader(file_card));
+			Scanner src = new Scanner(in);
+			src.useDelimiter("\\$");
+			
+			Op op;
+			int card;
+			while(src.hasNext())	{
+				//Grab query -> change to algebra
+				op = Algebra.compile(QueryFactory.create(src.next()));	
+				
+				//Grab the cardinality
+				card =  Integer.parseInt(src.next().trim());
+				
+				ServiceObj serv = new ServiceObj(op, card);
+				tempList.add(serv);
+			}
+		}
+		catch (FileNotFoundException e)	{
+			System.err.println("File " + file_card + " not found");
+		}
+		catch (QueryException e){
+			System.err.println("Syntax Error in file " + file_card);
+			System.err.println("Incorrect syntax in query");
+			System.err.println(e.getMessage());
+		}
+		catch (NumberFormatException e){
+			System.err.println("Syntax error in file " + file_card);
+			System.err.println("Numerical cardinality required");
+			System.err.println(e.getMessage());
+		}
+		
+		System.out.println("Done.");
+		return tempList;
 	}
 	
 	
@@ -136,6 +176,8 @@ public class CardOp {
 	/*
 	 * Given a bunch of service calls, will look up their respective estimated cardinalities from given cardinality.
 	 * If a service call bgp is not found in the estimated cardinality array, cardinality of infinity is given. 
+	 * Essentially a left join between scraped services, given service cardinalities; the service calls without a given cardinality 
+	 * are assigned a cardinality of infinity. 
 	 * 
 	 */
 	private static ArrayList<ServiceObj>  grabEstimatedCardinalityArray(ArrayList<Op> services, ArrayList<ServiceObj> cardList){
