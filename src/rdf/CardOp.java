@@ -7,6 +7,7 @@ import java.util.HashMap;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
+import com.hp.hpl.jena.sparql.algebra.OpAsQuery;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
 import com.hp.hpl.jena.sparql.algebra.OpWalker;
 import com.hp.hpl.jena.sparql.algebra.op.OpAssign;
@@ -51,30 +52,44 @@ import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 public class CardOp {
 	
 	//Here's the meat and potatoes. 
-	public static Op reorder(Query orig){
+	public static Query reorder(Query orig, ArrayList<ServiceObj> givenCardinalities ){
+		
+		
+		//Convert query to algebra and parse by service call
+		Op op = Algebra.compile(orig);	
+		ArrayList<Op> indivServices = grabIndivServices(op);
+		
+		//Grab the estimated cardinality from the file and reorder into a new algebra op
+		ArrayList<ServiceObj> pairedCardinalities = grabEstimatedCardinalityArray(indivServices, givenCardinalities);
+		pairedCardinalities= reorderAlgebra(pairedCardinalities);	//do the actual reordering based on the cardinality
+		Op newOp  = makeNewAlgebra(pairedCardinalities);	//mash them together into one algebra expression again
+		
+		printDebug(orig, op, pairedCardinalities, newOp);	
+		return OpAsQuery.asQuery(newOp);
+
+	}
+
+	/*
+	 * Parse the file of estimated cardinalities.
+	 */
+	static ArrayList<ServiceObj> parseCardinalityFile(String file_card)	{
+		ArrayList<ServiceObj> temp = new ArrayList<ServiceObj>();
+		return temp;
+	}
+	
+	
+	static void printDebug(Query orig, Op op, ArrayList<ServiceObj> cardinalities, Op newOp){
 		System.out.println("Original Query\n========================");
 		System.out.println(orig);
 		
-		Op op = Algebra.compile(orig);
 		System.out.println("Original Algebra\n========================");
 		System.out.println(op);
 		
-		ArrayList<Op> indivServices = grabIndivServices(op);
-		//System.out.println("Grab indiv services  \n========================");
-		//System.out.println(indivServices);
-		
-		ArrayList<ServiceObj> cardinalities = grabEstimatedCardinalityArray(indivServices);
-		System.out.println("Grab cardinalities \n========================");
+		System.out.println("Reorder by Cardinality \n========================");
 		System.out.println(cardinalities);
 		
-		cardinalities= reorderAlgebra(cardinalities);	//do the actual reordering based on the cardinality
-		System.out.println("Reorder Algebra \n========================");
-		System.out.println(cardinalities);
-		
-		Op newOp  = makeNewAlgebra(cardinalities);	//mash them together into one algebra expression again
 		System.out.println("redone algebra  \n========================");
 		System.out.println(newOp);
-		return newOp;
 	}
 	
 	/*
@@ -97,6 +112,7 @@ public class CardOp {
 	/*
 	 * makeNewAlgebra
 	 * given an array list of already sorted service calls, mash them together into one algebra expression again
+	 * problem - this erases the algebra outside the service calls.. so basically select * 
 	 */
 	
 	private static Op makeNewAlgebra(ArrayList<ServiceObj> servObjs)	{
@@ -115,34 +131,28 @@ public class CardOp {
 		OpWalker.walk(op, new ServiceGrabber(stuff));
 		return stuff;
 	}
-	/*
-	 * matches incoming service calls with their cardinalities, and returns it all in a hash map. 
-	 * not going to use this, since sorting a hash map/treempa is a pain
-	 */
+	
 	
 	/*
-	private static HashMap<Op,Integer> grabEstimatedCardinality(ArrayList<Op> services)	{
-		//Based on the service ops in this array list, will lookup their cardinality
-		//we assume we already know the cardinality estimates and store them in a table somewhere
-		
-		//for now I'll just hardcode this thing, but really we should look these up
-		//... it seems that opwalker may use go from bottom up so the order will be a bit messed up TODO
-		ArrayList<Integer> fakeCardinality = new ArrayList<Integer>();
-		fakeCardinality.add(3);
-		fakeCardinality.add(25);
-		
-		HashMap<Op,Integer> meat = new HashMap<Op,Integer>();
-		
-		for(int i =0; i < services.size(); i++)	{
-			meat.put(services.get(i), fakeCardinality.get(i));		//matching the service calls to the fake cardinalities
-		}
-		return meat;
-	}
-	*/
-	
-	/*
-	 * Given a bunch of service calls, will look up their respective estimated cardinalities
+	 * Given a bunch of service calls, will look up their respective estimated cardinalities from given cardinality.
+	 * If a service call bgp is not found in the estimated cardinality array, cardinality of infinity is given. 
 	 * 
+	 */
+	private static ArrayList<ServiceObj>  grabEstimatedCardinalityArray(ArrayList<Op> services, ArrayList<ServiceObj> cardList){
+		
+		ArrayList<ServiceObj> list = new ArrayList<ServiceObj>();
+		for(Op op: services){
+			//int cardinality = (int) (Math.random() * 30);	//for now randomly generate cardinalites from 0 - 30
+			
+			int cardinality = 10;
+			list.add(new ServiceObj(op, cardinality));
+			
+		}
+		return list;
+	}
+	
+	/*
+	 * Fake cardinality grabbing - for now, just ascending order.
 	 */
 	private static ArrayList<ServiceObj>  grabEstimatedCardinalityArray(ArrayList<Op> services){
 		
@@ -151,13 +161,16 @@ public class CardOp {
 		for(Op op: services){
 			//int cardinality = (int) (Math.random() * 30);	//for now randomly generate cardinalites from 0 - 30
 			list.add(new ServiceObj(op, cardinality));
-			cardinality -=1;
+			cardinality +=1;
 		}
 		return list;
 	}
 	
 
-	
+	/*
+	 * This class will extract service calls from a algebra's query and put them in an array list.
+	 * Use OpWalker to walk through a query using this OpVisitor.  
+	 */
 	public static class ServiceGrabber  implements OpVisitor {
 	
 		
