@@ -180,17 +180,23 @@ public class CardOp {
 	 * are assigned a cardinality of infinity. 
 	 * 
 	 */
-	private static ArrayList<ServiceObj>  grabEstimatedCardinalityArray(ArrayList<Op> services, ArrayList<ServiceObj> cardList){
+	private static ArrayList<ServiceObj>  grabEstimatedCardinalityArray(ArrayList<Op> services, ArrayList<ServiceObj> givenCard){
 		
-		ArrayList<ServiceObj> list = new ArrayList<ServiceObj>();
+		ArrayList<ServiceObj> pairedList = new ArrayList<ServiceObj>();
+		ServiceObj temp;
+		int card;
 		for(Op op: services){
-			//int cardinality = (int) (Math.random() * 30);	//for now randomly generate cardinalites from 0 - 30
-			
-			int cardinality = 10;
-			list.add(new ServiceObj(op, cardinality));
+			temp = new ServiceObj(op);
+			if(givenCard.contains(temp))	{
+				card = givenCard.get(givenCard.indexOf(temp)).getCard();
+			}
+			else	{
+				card = Integer.MAX_VALUE;
+			}
+			pairedList.add(new ServiceObj(op, card));
 			
 		}
-		return list;
+		return pairedList;
 	}
 	
 	/*
